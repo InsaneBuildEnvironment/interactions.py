@@ -45,7 +45,7 @@ class PrefixedManager:
             that takes in a `Client` and `Message` object and returns either a \
             string or an iterable of strings. Defaults to `None`.
         prefixed_context: The object to instantiate for Prefixed Context
-
+        accept_from_bots: Whether to accept commands from bots/webhooks
     """
 
     def __init__(
@@ -60,6 +60,7 @@ class PrefixedManager:
             ]
         ] = None,
         prefixed_context: type[PrefixedContext] = PrefixedContext,
+        accept_from_bots: bool = False
     ) -> None:
         # typehinting funkyness for better typehints
         client = cast(PrefixedInjectedClient, client)
@@ -69,6 +70,7 @@ class PrefixedManager:
         self.prefixed_context = prefixed_context
         self.commands: dict[str, PrefixedCommand] = {}
         self._ext_command_list: defaultdict[str, set[str]] = defaultdict(set)
+        self.accept_from_bots = accept_from_bots
 
         if (
             default_prefix or (generate_prefixes and generate_prefixes != when_mentioned)
@@ -257,9 +259,10 @@ class PrefixedManager:
         if not data.get("content"):
             return
 
-        # webhooks and users labeled with the bot property are bots, and should be ignored
-        if data.get("webhook_id") or data["author"].get("bot", False):
-            return
+        if not self.accept_from_bots:
+            # webhooks and users labeled with the bot property are bots, and should be ignored
+            if data.get("webhook_id") or data["author"].get("bot", False):
+                return
 
         # now, we've done the basic filtering out, but everything from here on out relies
         # on a proper message object, so now we either hope its already in the cache or wait
@@ -353,6 +356,7 @@ def setup(
         ]
     ] = None,
     prefixed_context: type[PrefixedContext] = PrefixedContext,
+    accept_from_bots: bool = False
 ) -> PrefixedManager:
     """
     Sets up prefixed commands. It is recommended to use this function directly to do so.
@@ -364,6 +368,7 @@ def setup(
             that takes in a `Client` and `Message` object and returns either a \
             string or an iterable of strings. Defaults to `None`.
         prefixed_context: The object to instantiate for Prefixed Context
+        accept_from_bots: Whether to accept commands from bots/webhooks
 
     Returns:
         PrefixedManager: The class that deals with all things prefixed commands.
@@ -374,4 +379,5 @@ def setup(
         default_prefix=default_prefix,
         generate_prefixes=generate_prefixes,
         prefixed_context=prefixed_context,
+        accept_from_bots=accept_from_bots
     )
